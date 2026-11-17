@@ -413,7 +413,7 @@ fn version_line(ui: &Ui, p: Paint, version: El) -> El {
     let badge = match ui.build_preview.unwrap_or_else(build_kind) {
         BuildKind::Release => return version,
         BuildKind::Local => tr("Local"),
-        BuildKind::Test => tr("Test"),
+        BuildKind::Test => tr("Personal"),
     };
     let c = &p.k.c;
     row()

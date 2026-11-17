@@ -20,7 +20,7 @@ if [ "${HEX_RELEASE_UNSIGNED:-}" = 1 ]; then
 elif [ "${HEX_TEST_BUILD:-}" = 1 ]; then
   team_id=
   identity=-
-  app_name="Hex Test"
+  app_name="Hex 2.0" # custom: Dalton's personal build
   bundle_id=anomaly.hex.test
 else
   team_id=${HEX_TEAM_ID:?Set HEX_TEAM_ID to the Apple Developer signing team}

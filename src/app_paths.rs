@@ -22,7 +22,7 @@ pub fn is_macos_test_build() -> bool {
 #[cfg(target_os = "macos")]
 pub fn app_name() -> &'static str {
     if is_macos_test_build() {
-        "Hex Test"
+        "Hex 2.0"
     } else {
         "Hex"
     }
