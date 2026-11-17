@@ -1,28 +1,15 @@
 {
   "fill": {
-    "linear-gradient": [
-      "srgb:0.18039,0.62745,0.43137,1.00000",
-      "srgb:0.03922,0.23529,0.17647,1.00000"
-    ],
-    "orientation": {
-      "start": {
-        "x": 0.5,
-        "y": 0
-      },
-      "stop": {
-        "x": 0.5,
-        "y": 0.7
-      }
-    }
+    "solid": "srgb:0.01961,0.23137,0.12941,1.00000"
   },
   "groups": [
     {
       "layers": [
         {
-          "image-name": "Image.png",
-          "name": "Hex",
+          "image-name": "Mic.png",
+          "name": "Mic",
           "position": {
-            "scale": 0.44,
+            "scale": 1.0,
             "translation-in-points": [
               0,
               0
@@ -31,12 +18,12 @@
         }
       ],
       "shadow": {
-        "kind": "neutral",
-        "opacity": 0.5
+        "kind": "none",
+        "opacity": 0
       },
       "translucency": {
-        "enabled": true,
-        "value": 0.5
+        "enabled": false,
+        "value": 0
       }
     }
   ],
