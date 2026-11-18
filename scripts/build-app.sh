@@ -25,6 +25,8 @@ elif [ "${HEX_TEST_BUILD:-}" = 1 ]; then
   identity=${HEX2_CODESIGN_IDENTITY:-${identity:--}}
   local_identity=1
   app_name="Hex 2.0" # custom: Dalton's personal build
+  # custom: FoundationModels macros need Xcode's toolchain, not Command Line Tools.
+  [ -z "${DEVELOPER_DIR:-}" ] && [ -d /Applications/Xcode.app ] && export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
   bundle_id=anomaly.hex.test
 else
   team_id=${HEX_TEAM_ID:?Set HEX_TEAM_ID to the Apple Developer signing team}

@@ -109,6 +109,8 @@ enum Target {
     Screenshot,
     #[cfg_attr(not(hex_capture), allow(dead_code))]
     ScreenshotRecord,
+    // Hex 2.0: dictation too, so Option+T still works while a password field holds secure input.
+    Dictation,
 }
 
 impl Target {
@@ -120,6 +122,7 @@ impl Target {
             Self::PasteMeeting => "paste-meeting",
             Self::Screenshot => "screenshot",
             Self::ScreenshotRecord => "screenshot-record",
+            Self::Dictation => "dictation",
         }
     }
 }
@@ -168,6 +171,7 @@ fn chords(hotkeys: RuntimeHotkeys, screenshots: [Option<RuntimeHotkey>; 2]) -> V
         (Target::PasteMeeting, hotkeys.paste_meeting),
         (Target::Screenshot, screenshot),
         (Target::ScreenshotRecord, screenshot_record),
+        (Target::Dictation, Some(hotkeys.dictation)),
     ];
     let mut chords = Vec::<Chord>::new();
     for (target, binding) in candidates {
@@ -709,6 +713,17 @@ mod tests {
         let mut left = option_shift_s();
         left.modifiers.option = Some(ModifierSide::Left);
         assert_eq!(carbon_chord(left), carbon_chord(option_shift_s()));
+    }
+
+    #[test]
+    fn the_dictation_shortcut_registers_too() {
+        let hotkeys = RuntimeHotkeys {
+            dictation: option_shift_s(),
+            ..RuntimeHotkeys::default()
+        };
+        assert!(chords(hotkeys, [None, None])
+            .iter()
+            .any(|chord| chord.target == Target::Dictation));
     }
 
     #[test]

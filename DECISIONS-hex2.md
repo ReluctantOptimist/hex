@@ -8,3 +8,5 @@
 - Evergreen glow pill: drawn in rune_hud.wgsl as plate mode 2 (field.y); the dot field code stays untouched below it.
 - Settings › General: Pill style (Hex dots + 10 catalog styles: 1, 3, 19, 22, 23, 24, 27, 28, 33, 35), Pill color (41: catalog 1–40 + Arcade), App theme (Hex standard / Arcade). Pill drawn by `pill_look` in rune_hud.wgsl (style = field.y − 1); colours ride in uniforms the pill leaves unused. Look catalog: https://claude.ai/artifact/43bSexayDGWBmz3R4e2tyN
 - Defaults follow the Hex 2.0 arcade logo: Classic bars in Arcade colours, Arcade window theme (an override of the dark kit's palette in rune_ui/controls.rs).
+- Secure input fallback includes the dictation shortcut (src/suppression/secure_input.rs, Target::Dictation), so Option+T keeps working while a password field (e.g. in Chrome) holds secure input. Upstream only re-registers Annotate/Paste/Screenshots.
+- scripts/build-app.sh uses Xcode's toolchain (DEVELOPER_DIR) for Hex 2.0 builds when xcode-select points at Command Line Tools; otherwise the Apple Intelligence Swift bridge fails to compile.
