@@ -75,10 +75,39 @@ pub(super) struct Paint {
     pub(super) hair: f32,
 }
 
+/// custom (Hex 2.0): the default "Arcade" window theme, after the Hex 2.0
+/// logo: deep navy panels, cyan text and accents, magenta borders.
+fn arcade_kit() -> &'static Kit {
+    static KIT: std::sync::LazyLock<Kit> = std::sync::LazyLock::new(|| {
+        let h = |s: &str| rune::color::hex(s).unwrap_or(rune::Color::WHITE);
+        let mut k = rune_theme_opencode::kit(true).clone();
+        let c = &mut k.c;
+        c.page = h("#07082a");
+        c.bg_base = h("#0d0f3d");
+        c.bg_deep = h("#05061f");
+        c.bg_accent = h("#22e6ff");
+        c.text_base = h("#e8fbff");
+        c.text_muted = h("#8fd8ec");
+        c.text_faint = h("#6a8fb8");
+        c.text_accent = h("#22e6ff");
+        c.icon_base = h("#bff4ff");
+        c.icon_muted = h("#7fc4dc");
+        c.icon_faint = h("#5b7fae");
+        c.icon_accent = h("#22e6ff");
+        c.border_muted = h("#26236a");
+        c.border_base = h("#4a2a9e");
+        c.border_strong = h("#ff1fe0");
+        c.border_focus = h("#ff1fe0");
+        k
+    });
+    &KIT
+}
+
 impl Paint {
     pub(super) fn new(dark: bool, scale: f32) -> Self {
+        let arcade = crate::app_settings::APP_THEME.load(std::sync::atomic::Ordering::Relaxed) == 1;
         Self {
-            k: rune_theme_opencode::kit(dark),
+            k: if arcade { arcade_kit() } else { rune_theme_opencode::kit(dark) },
             hair: 1.0 / scale,
         }
     }

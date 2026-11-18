@@ -64,6 +64,57 @@ const LIVE_TEXT_GAP: f32 = 6.0;
 /// Where the live text starts, as of the HUD's last show.
 static LIVE_TEXT: Mutex<Option<Spot>> = Mutex::new(None);
 
+// custom (Hex 2.0): Settings › General › Pill style and Pill color, numbered
+// as in the look catalog. Style 0 is Hex's own dot scope.
+static PILL_LOOK: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(1 << 8);
+pub const PILL_STYLES: [u8; 11] = [0, 1, 3, 19, 22, 23, 24, 27, 28, 33, 35];
+pub const PILL_STYLE_LABELS: [&str; 11] = [
+    "Original Hex dots", "1. Classic bars", "3. Mirror wave", "19. Level segments", "22. Heartbeat",
+    "23. Bouncing dots", "24. Fill bar", "27. Ripples", "28. Pixel blocks", "33. Siri wave",
+    "35. Shape shifter",
+];
+pub const PILL_COLOR_LABELS: [&str; 41] = [
+    "1. Evergreen glow", "2. Midnight", "3. Ember", "4. Synthwave", "5. Arctic frost", "6. Gold luxe",
+    "7. Terminal", "8. Rose", "9. Graphite", "10. Ocean", "11. Aurora", "12. Sunset", "13. Crimson",
+    "14. Lavender", "15. Mint", "16. Copper", "17. Ice", "18. Lime", "19. Blossom", "20. Emerald steel",
+    "21. Ruby", "22. Sapphire", "23. Amethyst", "24. Citrus", "25. Moss", "26. Slate", "27. Cotton candy",
+    "28. Deep sea", "29. Volcano", "30. Peach", "31. Matcha", "32. Ultraviolet", "33. Steel blue",
+    "34. Honey", "35. Glacier", "36. Cyberpunk", "37. Mocha", "38. Holographic", "39. Retro amber",
+    "40. Carbon red", "41. Arcade (Hex 2.0 logo)",
+];
+/// Plate, rim, dot, bar start, bar end, text (sRGB hex), per catalog colour.
+const PILL_COLORS: [[u32; 6]; 41] = [
+    [0x0b1f17, 0x1d9e75, 0x2ee59d, 0x5dcaa5, 0x5dcaa5, 0xcfeee0], [0x0b1430, 0x2f6fe0, 0x4da3ff, 0x6fb4ff, 0x6fb4ff, 0xd6e6ff],
+    [0x1e1612, 0xd8692e, 0xff8a3d, 0xffb36b, 0xff7a2e, 0xffe2cc], [0x1c0f2e, 0xc03cd8, 0xff4fd8, 0xff4fd8, 0x4fe3ff, 0xf4d9ff],
+    [0xf4f8fb, 0xb9c8d4, 0x3aa0d8, 0x4b6478, 0x4b6478, 0x2b3c4a], [0x0b0a08, 0xc9a24a, 0xf2c94c, 0xe2bb5a, 0xe2bb5a, 0xf5e6bf],
+    [0x020402, 0x1f6e2a, 0x39ff6a, 0x39ff6a, 0x39ff6a, 0x7dff9c], [0x2a121c, 0xd4537e, 0xff7aa8, 0xf4a0bd, 0xf4a0bd, 0xffe0ea],
+    [0x262626, 0x3a3a3a, 0xffffff, 0xe6e6e6, 0xe6e6e6, 0xf2f2f2], [0x08232a, 0x1a9fb0, 0x3fe0e0, 0x3fe0e0, 0x3a7bff, 0xd0f3f5],
+    [0x101828, 0x5a6ee0, 0x57f0d0, 0x57f0d0, 0x9b6cff, 0xe0e6ff], [0x2a1512, 0xe0684a, 0xffb648, 0xff6b57, 0xffc24a, 0xffe6d6],
+    [0x220a0d, 0xc0283a, 0xff3b52, 0xff5468, 0xff5468, 0xffd9de], [0x221d33, 0x8c7ae6, 0xc3b5ff, 0xb3a4ff, 0xb3a4ff, 0xece6ff],
+    [0xf6fbf8, 0x9fd8c0, 0x14b37d, 0x1fbf87, 0x1fbf87, 0x1d4a3a], [0x21170f, 0xb8743a, 0xe89a5a, 0xd98b4e, 0xd98b4e, 0xf6dcc4],
+    [0x071219, 0x3fb8d8, 0x9ff0ff, 0x7fe6ff, 0x7fe6ff, 0xdff9ff], [0x171a15, 0x8fd12a, 0xc6ff3d, 0xb4f02f, 0xb4f02f, 0xefffd0],
+    [0xfff7f4, 0xf0b3c4, 0xe85a8a, 0xef7fa4, 0xef7fa4, 0x5a2236], [0x2a2f2d, 0x2ee5b0, 0x3dffb4, 0xe9eeec, 0x9aa4a0, 0xe9eeec],
+    [0x24090f, 0xb3123a, 0xff2d55, 0xff4d6d, 0xff2d55, 0xffd6de], [0x0a1433, 0x2148c0, 0x4f7bff, 0x6f95ff, 0x3d63f0, 0xdbe4ff],
+    [0x1d1030, 0x7a3fd0, 0xb77bff, 0xc99bff, 0x8f55f0, 0xefe2ff], [0x1f1a0d, 0xe0a01a, 0xffd23f, 0xffe14f, 0xff8a1f, 0xfff3cc],
+    [0x162014, 0x5f7f3a, 0xa3d063, 0xb7dd7d, 0x7aa64a, 0xe7f3d6], [0x1b2129, 0x56677d, 0x9fb3cc, 0xb8c8dc, 0x7b90ab, 0xe6edf5],
+    [0xfff7fc, 0xf3b7d8, 0xff7ac6, 0xff8fd0, 0x7ac8ff, 0x5a2a4a], [0x05202b, 0x0f8fb0, 0x2fd6ff, 0x2fd6ff, 0x1f6fd6, 0xd6f6ff],
+    [0x1c0c08, 0xd43d14, 0xff5a1f, 0xffb020, 0xff3b14, 0xffe0cc], [0xfff6f0, 0xf5c2a6, 0xff8f5e, 0xffa77d, 0xff7b52, 0x5a2f1f],
+    [0xf7fbf3, 0xb9d39f, 0x5f9a3a, 0x7cb655, 0x4f8a2f, 0x26331d], [0x120a24, 0x6b2cff, 0xa66bff, 0xc38cff, 0x6b2cff, 0xece0ff],
+    [0x16202b, 0x3d6b94, 0x7fb2e0, 0x9cc6ec, 0x5d93c4, 0xe1eef9], [0x22180a, 0xc98a1b, 0xffc23d, 0xffd36b, 0xe89a1c, 0xfff0cf],
+    [0xf5fbfe, 0xbfe0ec, 0x1fa2c8, 0x3dbbe0, 0x1f7fb8, 0x16323d], [0x111111, 0xfcee0a, 0xfcee0a, 0xfcee0a, 0x00f0ff, 0xf2f2f2],
+    [0x241a14, 0x8a6447, 0xd9a066, 0xe2b585, 0xb98552, 0xf3e6d8], [0x17171f, 0x9aa7ff, 0xffffff, 0x7af0ff, 0xff7ae6, 0xf0f0ff],
+    [0x140e03, 0x8a5a00, 0xffb000, 0xffb000, 0xff8a00, 0xffbf3a], [0x18181b, 0xe5383b, 0xff4245, 0xe6e6ea, 0x9a9aa2, 0xf0f0f2],
+    [0x0a0b2e, 0xff1fe0, 0x22e6ff, 0x22e6ff, 0xff9a1a, 0xe8fbff],
+];
+
+pub fn set_pill_look(style: u8, color: u8) {
+    PILL_LOOK.store(u16::from(style) << 8 | u16::from(color), Ordering::Relaxed);
+}
+
+fn hex_rgb(c: u32) -> [f32; 3] {
+    [((c >> 16) & 255) as f32 / 255.0, ((c >> 8) & 255) as f32 / 255.0, (c & 255) as f32 / 255.0]
+}
+
 /// Where the live text plate starts: just past the HUD's plate, on its
 /// screen; with the HUD hidden, where its plate would be.
 pub(crate) fn live_text_place() -> Spot {
@@ -735,7 +786,7 @@ impl DotUniforms {
             center[0] += pose.width * layout.fit / 2.0;
         }
         let rgba = |c: [f32; 3]| [c[0], c[1], c[2], 1.0];
-        Self {
+        let mut uniforms = Self {
             resolution: [target.viewport[2], target.viewport[3]],
             backing_scale: target.scale,
             width: pose.width,
@@ -769,11 +820,28 @@ impl DotUniforms {
             // the mode, the voice, and the stage's clock.
             field: match layout.island {
                 Some(island) if island.ears => [island.notch[0] / 2.0, 1.0, pose.level, pose.clock],
-                // custom (Hex 2.0): mode 2 draws the Evergreen glow plate.
-                _ => [field_radius(layout, pose), 2.0, pose.level, pose.clock],
+                _ => [field_radius(layout, pose), 0.0, 0.0, 0.0],
             },
             ears: [pose.done, pose.fail, 0.0, 0.0],
+        };
+        // custom (Hex 2.0): a chosen pill style draws instead of the dot field
+        // (`field.y` = 1 + style); its colours ride in uniforms that style leaves unused.
+        let look = PILL_LOOK.load(Ordering::Relaxed);
+        let style = (look >> 8) as u8;
+        if style != 0 && layout.island.is_none() {
+            let c = PILL_COLORS[usize::from(look as u8) % PILL_COLORS.len()];
+            let [pl, rim, dot, b0, b1, tx] = c.map(hex_rgb);
+            uniforms.field = [uniforms.field[0], 1.0 + f32::from(style), pose.level, pose.clock];
+            uniforms.plate = [pl[0], pl[1], pl[2], 0.96];
+            uniforms.rim = rgba(rim);
+            uniforms.base = rgba(dot);
+            uniforms.core = rgba(b0);
+            uniforms.island = [b1[0], b1[1], b1[2], 0.0];
+            uniforms.glow = tx[0];
+            uniforms.grid = tx[1];
+            uniforms.live = tx[2];
         }
+        uniforms
     }
 }
 

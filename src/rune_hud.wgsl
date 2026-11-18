@@ -248,17 +248,13 @@ fn dot_value(index: i32) -> vec2f {
     return vec2f(f32(word & 0xffffu), f32(word >> 16u)) / 65535.0;
 }
 
-// custom (Hex 2.0): the "Evergreen glow" plate, drawn instead of the dot
-// field when `u.field.y` is 2: a dark green glass pill with a green rim and
-// soft glow, a pulsing dot, voice bars, and an m:ss timer. `u.field.z` is the
-// voice's 0–1 level and `u.field.w` seconds into the stage.
-const EG_PLATE: vec3f = vec3f(0.043, 0.122, 0.090);
-const EG_RIM: vec3f = vec3f(0.114, 0.620, 0.459);
-const EG_DOT: vec3f = vec3f(0.180, 0.898, 0.616);
-const EG_DOT_WORKING: vec3f = vec3f(0.624, 0.882, 0.796);
-const EG_BAR: vec3f = vec3f(0.365, 0.792, 0.647);
-const EG_TEXT: vec3f = vec3f(0.812, 0.933, 0.878);
+// custom (Hex 2.0): the look-catalog pill, drawn instead of the dot field
+// when `u.field.y` is 1 + a style number. `u.field.z` is the voice's 0–1
+// level and `u.field.w` seconds into the stage. Colours: plate `u.plate`,
+// rim `u.rim`, dot `u.base`, bars from `u.core` to `u.island.xyz`, text
+// (`u.glow`, `u.grid`, `u.live`).
 const EG_FAIL: vec3f = vec3f(1.0, 0.420, 0.341);
+const EG_AMBER: vec3f = vec3f(1.0, 0.761, 0.290);
 
 // One seven-segment digit, 4 pt wide and 8 pt tall, centred on `p`.
 fn eg_digit(p: vec2f, digit: i32) -> f32 {
@@ -278,56 +274,196 @@ fn eg_digit(p: vec2f, digit: i32) -> f32 {
     return d;
 }
 
-fn evergreen(result: ptr<function, vec4f>, point: vec2f, half_size: vec2f, distance: f32, aa: f32, shape: f32) {
+fn eg_wobble(clock: f32, i: i32) -> f32 {
+    let rate = 1.6 + 0.11 * f32((i * 7) % 5);
+    return 0.55 + 0.45 * sin(TAU * clock * rate * 0.5 + f32(i) * 1.7);
+}
+
+// Light running left to right while Hex works, 0.3 to 1.
+fn eg_shimmer(clock: f32, x: f32) -> f32 {
+    return 0.3 + 0.7 * pow(0.5 + 0.5 * cos(TAU * (clock * 1.1 - x * 0.02)), 3.0);
+}
+
+fn eg_ecg(p: f32) -> f32 {
+    if (p < 0.38) { return 0.0; }
+    if (p < 0.42) { return -(p - 0.38) / 0.04 * 4.0; }
+    if (p < 0.46) { return -4.0 + (p - 0.42) / 0.04 * 22.0; }
+    if (p < 0.5) { return 18.0 - (p - 0.46) / 0.04 * 24.0; }
+    if (p < 0.54) { return -6.0 + (p - 0.5) / 0.04 * 6.0; }
+    if (p < 0.7) { return -3.0 * sin((p - 0.54) / 0.16 * 3.14159); }
+    return 0.0;
+}
+
+fn pill_look(result: ptr<function, vec4f>, point: vec2f, half_size: vec2f, distance: f32, aa: f32, shape_in: f32, style: i32) {
     let level = clamp(u.field.z, 0.0, 1.0);
     let clock = max(u.field.w, 0.0);
     let working = clamp(u.cool, 0.0, 1.0);
     let fail = clamp(u.ears.y, 0.0, 1.0);
     let heard = sqrt(level);
-    let rim = mix(EG_RIM, EG_FAIL, fail);
+    let live = heard * (1.0 - working);
+    let text = vec3f(u.glow, u.grid, u.live);
+    let rim = mix(u.rim.rgb, EG_FAIL, fail);
+    let dot_c = mix(mix(u.base.rgb, text, 0.45 * working), EG_FAIL, fail);
+    let b0 = u.core.rgb;
+    let b1 = u.island.xyz;
+    let hx = half_size.x;
+    var shape = shape_in;
+    var d = distance;
 
-    // Outer glow that swells a little with the voice, then glass and rim.
-    let glow = (0.22 + 0.25 * heard * (1.0 - working)) * (0.5 - 0.5 * tanh((distance - 1.0) / 3.5));
-    composite(result, rim, glow * (1.0 - shape));
-    composite(result, EG_PLATE, 0.96 * shape);
-    composite(result, rim, coverage(abs(distance) - 0.5, aa));
-
-    // Leading dot: pulses while listening, steady while Hex works.
-    let dot_center = vec2f(-half_size.x + 12.0, 0.0);
-    let pulse = mix(0.45 + 0.55 * (0.5 + 0.5 * sin(TAU * clock * 0.8)), 1.0, working);
-    let dot_color = mix(mix(EG_DOT, EG_DOT_WORKING, working), EG_FAIL, fail);
-    composite(result, dot_color, 0.35 * pulse * coverage(length(point - dot_center) - 5.5, aa * 3.0));
-    composite(result, dot_color, pulse * coverage(length(point - dot_center) - 3.4, aa));
-
-    // Voice bars; at rest with light running through them while Hex works.
-    let bar_center = mix(-6.0, 6.0, working);
-    let count = 12;
-    for (var i = 0; i < count; i++) {
-        let n = f32(i);
-        let profile = 0.45 + 0.55 * sin(3.14159 * (n + 0.5) / f32(count));
-        let rate = 1.6 + 0.11 * f32((i * 7) % 5);
-        let wobble = 0.55 + 0.45 * sin(TAU * clock * rate * 0.5 + n * 1.7);
-        let height = 3.0 + 13.0 * heard * profile * wobble * (1.0 - working);
-        let x = bar_center + (n - (f32(count) - 1.0) * 0.5) * 4.2;
-        let bar = rounded_box(point - vec2f(x, 0.0), vec2f(1.2, max(height, 3.0) * 0.5), 1.2);
-        let light = 0.3 + 0.7 * pow(0.5 + 0.5 * cos(TAU * (clock * 1.1 - n * 0.09)), 3.0);
-        let alpha = (1.0 - working) + working * light;
-        composite(result, EG_BAR, alpha * shape * coverage(bar, aa));
+    // Shape shifter draws its own pill, as wide as the voice.
+    if (style == 35) {
+        let w = max(mix(half_size.y, hx, live), half_size.y);
+        d = rounded_box(point, vec2f(w, half_size.y), half_size.y);
+        shape = coverage(d, aa);
     }
 
-    // m:ss timer, right-aligned, only while listening.
+    // Glow, glass, and rim.
+    let glow = (0.22 + 0.25 * live) * (0.5 - 0.5 * tanh((d - 1.0) / 3.5));
+    composite(result, rim, glow * (1.0 - shape));
+    composite(result, u.plate.rgb, u.plate.a * shape);
+    composite(result, select(rim, dot_c, style == 35), coverage(abs(d) - 0.5, aa));
+
+    if (style == 35) {
+        composite(result, dot_c, coverage(length(point) - 3.4, aa));
+        return;
+    }
+
+    if (style == 3) {
+        // Mirror wave: one smooth line, swinging up and down with the voice.
+        let span = hx - 10.0;
+        if (abs(point.x) < span) {
+            let s = point.x / span;
+            let y = cos(s * 1.5708) * live * 9.0 * sin(s * 11.0 + clock * 8.0) * cos(s * 3.5 - clock * 3.0);
+            let alpha = (1.0 - working) + working * eg_shimmer(clock, point.x);
+            composite(result, mix(b0, b1, s * 0.5 + 0.5), alpha * shape * coverage(abs(point.y - y) - 0.8, aa * 1.5));
+        }
+        return;
+    }
+    if (style == 19) {
+        // Level segments: green to amber to red.
+        let lit = i32(round(live * 12.0));
+        for (var i = 0; i < 12; i++) {
+            let x = (f32(i) - 5.5) * 7.6;
+            let seg = rounded_box(point - vec2f(x, 0.0), vec2f(3.0, 5.0), 1.5);
+            var c = mix(b0, b1, f32(i) / 6.0);
+            if (i >= 7) { c = EG_AMBER; }
+            if (i >= 10) { c = EG_FAIL; }
+            var alpha = 0.12;
+            if (i < lit) { alpha = 1.0; }
+            if (working > 0.5) { c = b0; alpha = 0.15 + 0.6 * eg_shimmer(clock, x); }
+            composite(result, select(text, c, alpha > 0.13), alpha * shape * coverage(seg, aa));
+        }
+        return;
+    }
+    if (style == 22) {
+        // Heartbeat: an ECG trace that scrolls, taller as you speak.
+        let span = hx - 8.0;
+        if (abs(point.x) < span) {
+            let y = -eg_ecg(fract(point.x * 0.012 + clock * 1.4)) * (0.2 + 0.3 * live + 0.1 * working);
+            composite(result, dot_c, shape * coverage(abs(point.y - y) - 0.8, aa * 2.0));
+        }
+        return;
+    }
+    if (style == 23) {
+        // Bouncing dots.
+        for (var i = 0; i < 3; i++) {
+            let n = f32(i);
+            var y = 2.0 - 6.0 * abs(sin(clock * 6.0 - n * 0.6)) * (0.3 + 0.9 * live);
+            if (working > 0.5) { y = 2.0 - 3.0 * abs(sin(clock * 4.0 - n * 0.8)); }
+            composite(result, mix(b0, b1, n * 0.5), shape * coverage(length(point - vec2f(-12.0 + n * 12.0, y)) - 3.2, aa));
+        }
+        return;
+    }
+    if (style == 24) {
+        // Fill bar: a track that fills with the voice.
+        let span = hx - 10.0;
+        let track = rounded_box(point, vec2f(span, 4.0), 4.0);
+        composite(result, text, 0.12 * shape * coverage(track, aa));
+        var right = -span + 2.0 * span * max(0.06, live);
+        var left = -span;
+        if (working > 0.5) {
+            let middle = -span + fract(clock * 0.6) * 2.0 * span;
+            left = middle - 12.0;
+            right = middle + 12.0;
+        }
+        let fill = max(track, max(point.x - right, left - point.x));
+        composite(result, mix(b0, b1, point.x / span * 0.5 + 0.5), shape * coverage(fill, aa));
+        return;
+    }
+    if (style == 27) {
+        // Ripples: three lines rippling with the voice.
+        let span = hx - 8.0;
+        if (abs(point.x) < span) {
+            for (var j = 0; j < 3; j++) {
+                let k = f32(j);
+                let y = (k - 1.0) * 6.0 + sin(point.x * 0.09 + clock * 4.0 + k) * live * 3.0 * (1.0 - abs(k - 1.0) / 2.5);
+                let alpha = (1.0 - abs(k - 1.0) * 0.3) * ((1.0 - working) + working * eg_shimmer(clock, point.x));
+                composite(result, mix(b0, b1, k * 0.5), alpha * shape * coverage(abs(point.y - y) - 0.7, aa * 1.5));
+            }
+        }
+        return;
+    }
+    if (style == 28) {
+        // Pixel blocks: chunky 8-bit columns.
+        for (var i = 0; i < 12; i++) {
+            let x = (f32(i) - 5.5) * 7.5;
+            let profile = 0.45 + 0.55 * sin(3.14159 * (f32(i) + 0.5) / 12.0);
+            let lit = i32(round(live * profile * eg_wobble(clock, i) * 1.6 * 4.0));
+            for (var r = 0; r < 4; r++) {
+                let block = rounded_box(point - vec2f(x, 7.5 - f32(r) * 5.0), vec2f(3.0, 2.0), 0.0);
+                var alpha = 0.1;
+                if (r < max(lit, 1)) { alpha = 1.0; }
+                if (working > 0.5) { alpha = select(0.1, eg_shimmer(clock, x), r == 0); }
+                composite(result, select(text, mix(b0, b1, f32(r) / 3.0), alpha > 0.11), alpha * shape * coverage(block, aa));
+            }
+        }
+        return;
+    }
+    if (style == 33) {
+        // Siri wave: three overlapping lenses and a centre line.
+        let span = hx - 8.0;
+        composite(result, text, 0.3 * shape * coverage(abs(point.y) - 0.4, aa));
+        if (abs(point.x) < span) {
+            let s = point.x / span;
+            let env = (1.0 - s * s) * (1.0 - s * s);
+            let colors = array<vec3f, 3>(b0, b1, dot_c);
+            for (var k = 0; k < 3; k++) {
+                let f = f32(k);
+                var amp = env * live * 9.0 * abs(sin(point.x * 0.09 * (1.0 + f * 0.3) + clock * (3.0 + f)));
+                amp = max(amp, env * working * 2.5 * eg_shimmer(clock, point.x + f * 20.0));
+                composite(result, colors[k], 0.45 * shape * coverage(abs(point.y) - amp, aa));
+            }
+        }
+        return;
+    }
+
+    // 1, Classic bars: pulsing dot, voice bars, and an m:ss timer.
+    let dot_center = vec2f(-hx + 12.0, 0.0);
+    let pulse = mix(0.45 + 0.55 * (0.5 + 0.5 * sin(TAU * clock * 0.8)), 1.0, working);
+    composite(result, dot_c, 0.35 * pulse * coverage(length(point - dot_center) - 5.5, aa * 3.0));
+    composite(result, dot_c, pulse * coverage(length(point - dot_center) - 3.4, aa));
+    let bar_center = mix(-6.0, 6.0, working);
+    for (var i = 0; i < 12; i++) {
+        let n = f32(i);
+        let profile = 0.45 + 0.55 * sin(3.14159 * (n + 0.5) / 12.0);
+        let height = 3.0 + 13.0 * live * profile * eg_wobble(clock, i);
+        let x = bar_center + (n - 5.5) * 4.2;
+        let bar = rounded_box(point - vec2f(x, 0.0), vec2f(1.2, max(height, 3.0) * 0.5), 1.2);
+        let alpha = (1.0 - working) + working * eg_shimmer(clock, n * 4.2);
+        composite(result, mix(b0, b1, n / 11.0), alpha * shape * coverage(bar, aa));
+    }
     let shown = (1.0 - working) * shape;
     if (shown > 0.01) {
         let total = i32(floor(clock));
         let minutes = (total / 60) % 10;
         let seconds = total % 60;
-        let right = half_size.x - 9.0;
-        var d = eg_digit(point - vec2f(right - 2.0, 0.0), seconds % 10);
-        d = min(d, eg_digit(point - vec2f(right - 8.0, 0.0), seconds / 10));
-        d = min(d, length(point - vec2f(right - 12.5, -2.0)) - 0.7);
-        d = min(d, length(point - vec2f(right - 12.5, 2.0)) - 0.7);
-        d = min(d, eg_digit(point - vec2f(right - 17.0, 0.0), minutes));
-        composite(result, EG_TEXT, shown * coverage(d, aa));
+        let right = hx - 9.0;
+        var t = eg_digit(point - vec2f(right - 2.0, 0.0), seconds % 10);
+        t = min(t, eg_digit(point - vec2f(right - 8.0, 0.0), seconds / 10));
+        t = min(t, length(point - vec2f(right - 12.5, -2.0)) - 0.7);
+        t = min(t, length(point - vec2f(right - 12.5, 2.0)) - 0.7);
+        t = min(t, eg_digit(point - vec2f(right - 17.0, 0.0), minutes));
+        composite(result, text, shown * coverage(t, aa));
     }
 }
 
@@ -361,9 +497,9 @@ fn dot_scope_fragment(in: Varyings) -> @location(0) vec4f {
     composite(&result, u.shadow.rgb, u.shadow.a * (0.5 - 0.5 * tanh(shadow_distance / 6.5)));
 
     let shape = coverage(distance, aa) * island_shape;
-    // custom (Hex 2.0): the Evergreen glow plate replaces the dot field.
+    // custom (Hex 2.0): a look-catalog pill style replaces the dot field.
     if (!in_island && u.field.y > 1.5) {
-        evergreen(&result, point, half_size, distance, aa, shape);
+        pill_look(&result, point, half_size, distance, aa, shape, i32(round(u.field.y - 1.0)));
         result *= u.opacity;
         return for_target(dithered(result, position));
     }

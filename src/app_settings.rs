@@ -70,6 +70,8 @@ static CALENDAR_SETTINGS: OnceLock<RwLock<CalendarSettings>> = OnceLock::new();
 static MICROPHONE_POLICY: AtomicU8 = AtomicU8::new(0);
 static CUSTOM_TRANSFORMATIONS_ENABLED: AtomicBool = AtomicBool::new(false);
 static INDICATOR_POSITION: AtomicU8 = AtomicU8::new(0);
+/// custom (Hex 2.0): `app_theme`, read by the window's paint (1 = Arcade).
+pub static APP_THEME: AtomicU8 = AtomicU8::new(1);
 static HOTKEYS: OnceLock<RwLock<AppliedHotkeys>> = OnceLock::new();
 static HOTKEY_CAPTURE_ACTIVE: AtomicBool = AtomicBool::new(false);
 #[cfg(test)]
@@ -251,6 +253,11 @@ pub struct AppSettings {
     pub sound_effect_volume: f32,
     /// Which feedback sounds play (`crate::feedback`).
     pub sound_theme: crate::feedback::SoundSet,
+    /// custom (Hex 2.0): the dictation pill's look-catalog style (0 = Hex's dots) and colour.
+    pub pill_style: u8,
+    pub pill_color: u8,
+    /// custom (Hex 2.0): the window theme: 0 Hex standard, 1 Arcade (default).
+    pub app_theme: u8,
     pub microphone: Option<String>,
     /// System default records from the built-in microphone, else another
     /// real input, rather than a Bluetooth default.
@@ -421,6 +428,9 @@ impl Default for AppSettings {
             sound_effects: true,
             sound_effect_volume: 0.5,
             sound_theme: crate::feedback::SoundSet::default(),
+            pill_style: 1,
+            pill_color: 40,
+            app_theme: 1,
             microphone: None,
             avoid_bluetooth_microphone: true,
             recording_audio_behavior: RecordingAudioBehavior::DoNothing,
@@ -756,6 +766,8 @@ impl AppSettings {
         crate::feedback::set_enabled(self.sound_effects);
         crate::feedback::set_volume(self.sound_effect_volume.clamp(0.0, 1.0));
         crate::feedback::set_sound_set(self.sound_theme);
+        crate::rune_hud::set_pill_look(self.pill_style, self.pill_color);
+        APP_THEME.store(self.app_theme, Ordering::Relaxed);
         crate::desktop::i18n::apply(self.ui_language.as_deref());
         INDICATOR_POSITION.store(self.indicator_position as u8, Ordering::Relaxed);
         #[cfg(not(target_os = "macos"))]

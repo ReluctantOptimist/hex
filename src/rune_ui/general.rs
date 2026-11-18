@@ -935,6 +935,61 @@ pub(super) fn output(ui: &Ui, p: Paint, layer: &mut Vec<El>, query: &str) -> Vec
             layer,
         ),
     );
+    // custom (Hex 2.0): the pill's look, from the look catalog.
+    rows.push(
+        "Pill style",
+        pick_row(
+            ui,
+            p,
+            "pill-style",
+            &PANEL,
+            "Pill style",
+            crate::rune_hud::PILL_STYLE_LABELS.to_vec(),
+            crate::rune_hud::PILL_STYLES
+                .iter()
+                .position(|style| *style == settings.pill_style)
+                .unwrap_or(1),
+            |ui, index| {
+                let style = crate::rune_hud::PILL_STYLES[index];
+                ui.update(|settings| settings.pill_style = style);
+            },
+            layer,
+        ),
+    );
+    rows.push(
+        "Pill color",
+        pick_row(
+            ui,
+            p,
+            "pill-color",
+            &PANEL,
+            "Pill color",
+            crate::rune_hud::PILL_COLOR_LABELS.to_vec(),
+            usize::from(settings.pill_color).min(40),
+            |ui, index| {
+                let color = index as u8;
+                ui.update(|settings| settings.pill_color = color);
+            },
+            layer,
+        ),
+    );
+    rows.push(
+        "App theme",
+        pick_row(
+            ui,
+            p,
+            "app-theme",
+            &PANEL,
+            "App theme",
+            vec!["Hex standard", "Arcade (Hex 2.0 logo)"],
+            usize::from(settings.app_theme).min(1),
+            |ui, index| {
+                let theme = index as u8;
+                ui.update(|settings| settings.app_theme = theme);
+            },
+            layer,
+        ),
+    );
     if ui.platform.caps.terminal_paste {
         rows.push_described(
             tr("Terminal paste"),
