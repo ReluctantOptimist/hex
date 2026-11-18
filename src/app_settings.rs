@@ -256,7 +256,7 @@ pub struct AppSettings {
     /// custom (Hex 2.0): the dictation pill's look-catalog style (0 = Hex's dots) and colour.
     pub pill_style: u8,
     pub pill_color: u8,
-    /// custom (Hex 2.0): the window theme: 0 Hex standard, 1 Arcade (default).
+    /// custom (Hex 2.0): the window theme: 0 Hex standard, 1 Arcade (default), 2 Comic.
     pub app_theme: u8,
     pub microphone: Option<String>,
     /// System default records from the built-in microphone, else another

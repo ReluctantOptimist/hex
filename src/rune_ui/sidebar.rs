@@ -18,6 +18,11 @@ static OUTPUT_ICON: Icon = Icon {
     view: 24.0,
     body: include_str!("../../assets/icons/output.svg"),
 };
+static THEMES_ICON: Icon = Icon {
+    name: "hex-themes",
+    view: 24.0,
+    body: include_str!("../../assets/icons/themes.svg"),
+};
 static HISTORY_ICON: Icon = Icon {
     name: "hex-history",
     view: 24.0,
@@ -65,6 +70,8 @@ pub(super) enum Pane {
     /// Recorded calls and their settings, or the opt-in (macOS beta).
     Meetings,
     History,
+    /// custom (Hex 2.0): app theme and the dictation pill's look.
+    Themes,
     /// The shots and recordings Labs › Screenshots saved (macOS, while
     /// it's on).
     #[cfg(hex_capture)]
@@ -91,6 +98,7 @@ impl Pane {
         Pane::Modes,
         Pane::Meetings,
         Pane::History,
+        Pane::Themes,
         #[cfg(hex_capture)]
         Pane::Captures,
         #[cfg(hex_capture)]
@@ -122,6 +130,7 @@ impl Pane {
             Pane::Output => tr("Output"),
             Pane::Modes => tr("Modes"),
             Pane::History => tr("History"),
+            Pane::Themes => "Themes",
             #[cfg(hex_capture)]
             Pane::Captures => tr("Captures"),
             Pane::Meetings => tr("Meetings"),
@@ -139,6 +148,7 @@ impl Pane {
             Pane::Output => "nav-output",
             Pane::Modes => "nav-modes",
             Pane::History => "nav-history",
+            Pane::Themes => "nav-themes",
             #[cfg(hex_capture)]
             Pane::Captures => "nav-captures",
             Pane::Meetings => "nav-meetings",
@@ -156,6 +166,7 @@ impl Pane {
             Pane::Output => &OUTPUT_ICON,
             Pane::Modes => &MODES_ICON,
             Pane::History => &HISTORY_ICON,
+            Pane::Themes => &THEMES_ICON,
             #[cfg(hex_capture)]
             Pane::Captures => &captures::CAPTURES_ICON,
             Pane::Meetings => &MEETINGS_ICON,

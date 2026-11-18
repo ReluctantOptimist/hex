@@ -73,17 +73,17 @@ pub const PILL_STYLE_LABELS: [&str; 11] = [
     "23. Bouncing dots", "24. Fill bar", "27. Ripples", "28. Pixel blocks", "33. Siri wave",
     "35. Shape shifter",
 ];
-pub const PILL_COLOR_LABELS: [&str; 41] = [
+pub const PILL_COLOR_LABELS: [&str; 42] = [
     "1. Evergreen glow", "2. Midnight", "3. Ember", "4. Synthwave", "5. Arctic frost", "6. Gold luxe",
     "7. Terminal", "8. Rose", "9. Graphite", "10. Ocean", "11. Aurora", "12. Sunset", "13. Crimson",
     "14. Lavender", "15. Mint", "16. Copper", "17. Ice", "18. Lime", "19. Blossom", "20. Emerald steel",
     "21. Ruby", "22. Sapphire", "23. Amethyst", "24. Citrus", "25. Moss", "26. Slate", "27. Cotton candy",
     "28. Deep sea", "29. Volcano", "30. Peach", "31. Matcha", "32. Ultraviolet", "33. Steel blue",
     "34. Honey", "35. Glacier", "36. Cyberpunk", "37. Mocha", "38. Holographic", "39. Retro amber",
-    "40. Carbon red", "41. Arcade (Hex 2.0 logo)",
+    "40. Carbon red", "41. Arcade (Hex 2.0 logo)", "42. Comic (DSF logo)",
 ];
 /// Plate, rim, dot, bar start, bar end, text (sRGB hex), per catalog colour.
-const PILL_COLORS: [[u32; 6]; 41] = [
+const PILL_COLORS: [[u32; 6]; 42] = [
     [0x0b1f17, 0x1d9e75, 0x2ee59d, 0x5dcaa5, 0x5dcaa5, 0xcfeee0], [0x0b1430, 0x2f6fe0, 0x4da3ff, 0x6fb4ff, 0x6fb4ff, 0xd6e6ff],
     [0x1e1612, 0xd8692e, 0xff8a3d, 0xffb36b, 0xff7a2e, 0xffe2cc], [0x1c0f2e, 0xc03cd8, 0xff4fd8, 0xff4fd8, 0x4fe3ff, 0xf4d9ff],
     [0xf4f8fb, 0xb9c8d4, 0x3aa0d8, 0x4b6478, 0x4b6478, 0x2b3c4a], [0x0b0a08, 0xc9a24a, 0xf2c94c, 0xe2bb5a, 0xe2bb5a, 0xf5e6bf],
@@ -105,6 +105,8 @@ const PILL_COLORS: [[u32; 6]; 41] = [
     [0x241a14, 0x8a6447, 0xd9a066, 0xe2b585, 0xb98552, 0xf3e6d8], [0x17171f, 0x9aa7ff, 0xffffff, 0x7af0ff, 0xff7ae6, 0xf0f0ff],
     [0x140e03, 0x8a5a00, 0xffb000, 0xffb000, 0xff8a00, 0xffbf3a], [0x18181b, 0xe5383b, 0xff4245, 0xe6e6ea, 0x9a9aa2, 0xf0f0f2],
     [0x0a0b2e, 0xff1fe0, 0x22e6ff, 0x22e6ff, 0xff9a1a, 0xe8fbff],
+    // custom (Hex 2.0): Comic, after the DSF Claude Organizer logo.
+    [0xe8202a, 0x141414, 0xffd21f, 0xffd21f, 0xfffaf0, 0xfffaf0],
 ];
 
 pub fn set_pill_look(style: u8, color: u8) {

@@ -103,12 +103,56 @@ fn arcade_kit() -> &'static Kit {
     &KIT
 }
 
+/// custom (Hex 2.0): the "Comic" window theme, after the DSF Claude
+/// Organizer logo: sky-blue page, cream panels, yellow selection, red
+/// accents, and black outlines (drawn 2 px wide by `Paint::new`).
+fn comic_kit() -> &'static Kit {
+    static KIT: std::sync::LazyLock<Kit> = std::sync::LazyLock::new(|| {
+        let h = |s: &str| rune::color::hex(s).unwrap_or(rune::Color::WHITE);
+        let mut k = rune_theme_opencode::kit(false).clone();
+        let c = &mut k.c;
+        let ink = h("#141414");
+        c.page = h("#29a9e9");
+        c.bg_base = h("#fffaf0");
+        c.bg_deep = h("#29a9e9");
+        c.layer_01 = h("#ffffff");
+        c.layer_02 = h("#ffd21f");
+        c.layer_03 = h("#ffe36b");
+        c.layer_04 = h("#ffec99");
+        c.surface_base = h("#ffffff");
+        c.bg_accent = h("#e8202a");
+        c.knob_on = h("#e8202a");
+        c.text_base = ink;
+        c.text_strong = ink;
+        c.text_muted = h("#262626");
+        c.text_weak = h("#262626");
+        c.text_faint = h("#3d3d3d");
+        c.text_accent = h("#c8121c");
+        c.icon_base = ink;
+        c.icon_muted = h("#262626");
+        c.icon_faint = h("#3d3d3d");
+        c.icon_accent = h("#e8202a");
+        c.border_weak = ink;
+        c.border_muted = ink;
+        c.border_base = ink;
+        c.border_strong = ink;
+        c.border_focus = h("#e8202a");
+        k
+    });
+    &KIT
+}
+
 impl Paint {
     pub(super) fn new(dark: bool, scale: f32) -> Self {
-        let arcade = crate::app_settings::APP_THEME.load(std::sync::atomic::Ordering::Relaxed) == 1;
+        let theme = crate::app_settings::APP_THEME.load(std::sync::atomic::Ordering::Relaxed);
+        let (k, line) = match theme {
+            1 => (arcade_kit(), 1.0),
+            2 => (comic_kit(), 2.0),
+            _ => (rune_theme_opencode::kit(dark), 1.0),
+        };
         Self {
-            k: if arcade { arcade_kit() } else { rune_theme_opencode::kit(dark) },
-            hair: 1.0 / scale,
+            k,
+            hair: line / scale,
         }
     }
     /// A section label: above its card, on the page's text edge. Screen

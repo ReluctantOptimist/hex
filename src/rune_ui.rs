@@ -65,6 +65,7 @@ mod shortcut_rule;
 mod sidebar;
 mod sidebar_update;
 mod sound_sets;
+mod themes;
 mod spark;
 mod speech_model;
 #[cfg(target_os = "macos")]
@@ -1394,6 +1395,7 @@ fn view(ui: &Ui, cx: &mut Cx<Ui>) -> El {
         Pane::Output => (Vec::new(), output::pane(ui, p, cx.is_reduced_motion())),
         Pane::Modes => modes::pane(ui, p, &mut layer),
         Pane::History => history::pane(ui, p, &mut layer),
+        Pane::Themes => (Vec::new(), themes::pane(ui, p, &mut layer)),
         #[cfg(hex_capture)]
         Pane::Captures => (Vec::new(), captures::pane(ui, p)),
         Pane::Meetings => meetings::pane(ui, p, &mut layer),
