@@ -248,6 +248,89 @@ fn dot_value(index: i32) -> vec2f {
     return vec2f(f32(word & 0xffffu), f32(word >> 16u)) / 65535.0;
 }
 
+// custom (Hex 2.0): the "Evergreen glow" plate, drawn instead of the dot
+// field when `u.field.y` is 2: a dark green glass pill with a green rim and
+// soft glow, a pulsing dot, voice bars, and an m:ss timer. `u.field.z` is the
+// voice's 0–1 level and `u.field.w` seconds into the stage.
+const EG_PLATE: vec3f = vec3f(0.043, 0.122, 0.090);
+const EG_RIM: vec3f = vec3f(0.114, 0.620, 0.459);
+const EG_DOT: vec3f = vec3f(0.180, 0.898, 0.616);
+const EG_DOT_WORKING: vec3f = vec3f(0.624, 0.882, 0.796);
+const EG_BAR: vec3f = vec3f(0.365, 0.792, 0.647);
+const EG_TEXT: vec3f = vec3f(0.812, 0.933, 0.878);
+const EG_FAIL: vec3f = vec3f(1.0, 0.420, 0.341);
+
+// One seven-segment digit, 4 pt wide and 8 pt tall, centred on `p`.
+fn eg_digit(p: vec2f, digit: i32) -> f32 {
+    let masks = array<i32, 10>(63, 6, 91, 79, 102, 109, 125, 7, 127, 111);
+    let bits = masks[clamp(digit, 0, 9)];
+    let w = 2.0;
+    let h = 4.0;
+    let r = 0.62;
+    var d = 1e4;
+    if ((bits & 1) != 0) { d = min(d, segment(p, vec2f(-w, -h), vec2f(w, -h), r)); }
+    if ((bits & 2) != 0) { d = min(d, segment(p, vec2f(w, -h), vec2f(w, 0.0), r)); }
+    if ((bits & 4) != 0) { d = min(d, segment(p, vec2f(w, 0.0), vec2f(w, h), r)); }
+    if ((bits & 8) != 0) { d = min(d, segment(p, vec2f(-w, h), vec2f(w, h), r)); }
+    if ((bits & 16) != 0) { d = min(d, segment(p, vec2f(-w, 0.0), vec2f(-w, h), r)); }
+    if ((bits & 32) != 0) { d = min(d, segment(p, vec2f(-w, -h), vec2f(-w, 0.0), r)); }
+    if ((bits & 64) != 0) { d = min(d, segment(p, vec2f(-w, 0.0), vec2f(w, 0.0), r)); }
+    return d;
+}
+
+fn evergreen(result: ptr<function, vec4f>, point: vec2f, half_size: vec2f, distance: f32, aa: f32, shape: f32) {
+    let level = clamp(u.field.z, 0.0, 1.0);
+    let clock = max(u.field.w, 0.0);
+    let working = clamp(u.cool, 0.0, 1.0);
+    let fail = clamp(u.ears.y, 0.0, 1.0);
+    let heard = sqrt(level);
+    let rim = mix(EG_RIM, EG_FAIL, fail);
+
+    // Outer glow that swells a little with the voice, then glass and rim.
+    let glow = (0.22 + 0.25 * heard * (1.0 - working)) * (0.5 - 0.5 * tanh((distance - 1.0) / 3.5));
+    composite(result, rim, glow * (1.0 - shape));
+    composite(result, EG_PLATE, 0.96 * shape);
+    composite(result, rim, coverage(abs(distance) - 0.5, aa));
+
+    // Leading dot: pulses while listening, steady while Hex works.
+    let dot_center = vec2f(-half_size.x + 12.0, 0.0);
+    let pulse = mix(0.45 + 0.55 * (0.5 + 0.5 * sin(TAU * clock * 0.8)), 1.0, working);
+    let dot_color = mix(mix(EG_DOT, EG_DOT_WORKING, working), EG_FAIL, fail);
+    composite(result, dot_color, 0.35 * pulse * coverage(length(point - dot_center) - 5.5, aa * 3.0));
+    composite(result, dot_color, pulse * coverage(length(point - dot_center) - 3.4, aa));
+
+    // Voice bars; at rest with light running through them while Hex works.
+    let bar_center = mix(-6.0, 6.0, working);
+    let count = 12;
+    for (var i = 0; i < count; i++) {
+        let n = f32(i);
+        let profile = 0.45 + 0.55 * sin(3.14159 * (n + 0.5) / f32(count));
+        let rate = 1.6 + 0.11 * f32((i * 7) % 5);
+        let wobble = 0.55 + 0.45 * sin(TAU * clock * rate * 0.5 + n * 1.7);
+        let height = 3.0 + 13.0 * heard * profile * wobble * (1.0 - working);
+        let x = bar_center + (n - (f32(count) - 1.0) * 0.5) * 4.2;
+        let bar = rounded_box(point - vec2f(x, 0.0), vec2f(1.2, max(height, 3.0) * 0.5), 1.2);
+        let light = 0.3 + 0.7 * pow(0.5 + 0.5 * cos(TAU * (clock * 1.1 - n * 0.09)), 3.0);
+        let alpha = (1.0 - working) + working * light;
+        composite(result, EG_BAR, alpha * shape * coverage(bar, aa));
+    }
+
+    // m:ss timer, right-aligned, only while listening.
+    let shown = (1.0 - working) * shape;
+    if (shown > 0.01) {
+        let total = i32(floor(clock));
+        let minutes = (total / 60) % 10;
+        let seconds = total % 60;
+        let right = half_size.x - 9.0;
+        var d = eg_digit(point - vec2f(right - 2.0, 0.0), seconds % 10);
+        d = min(d, eg_digit(point - vec2f(right - 8.0, 0.0), seconds / 10));
+        d = min(d, length(point - vec2f(right - 12.5, -2.0)) - 0.7);
+        d = min(d, length(point - vec2f(right - 12.5, 2.0)) - 0.7);
+        d = min(d, eg_digit(point - vec2f(right - 17.0, 0.0), minutes));
+        composite(result, EG_TEXT, shown * coverage(d, aa));
+    }
+}
+
 @fragment
 fn dot_scope_fragment(in: Varyings) -> @location(0) vec4f {
     let uv = in.uv;
@@ -278,6 +361,12 @@ fn dot_scope_fragment(in: Varyings) -> @location(0) vec4f {
     composite(&result, u.shadow.rgb, u.shadow.a * (0.5 - 0.5 * tanh(shadow_distance / 6.5)));
 
     let shape = coverage(distance, aa) * island_shape;
+    // custom (Hex 2.0): the Evergreen glow plate replaces the dot field.
+    if (!in_island && u.field.y > 1.5) {
+        evergreen(&result, point, half_size, distance, aa, shape);
+        result *= u.opacity;
+        return for_target(dithered(result, position));
+    }
     composite(&result, u.plate.rgb, u.plate.a * shape);
     composite(&result, u.rim.rgb, u.rim.a * coverage(abs(distance) - 0.3, aa));
 

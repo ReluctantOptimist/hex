@@ -769,7 +769,8 @@ impl DotUniforms {
             // the mode, the voice, and the stage's clock.
             field: match layout.island {
                 Some(island) if island.ears => [island.notch[0] / 2.0, 1.0, pose.level, pose.clock],
-                _ => [field_radius(layout, pose), 0.0, 0.0, 0.0],
+                // custom (Hex 2.0): mode 2 draws the Evergreen glow plate.
+                _ => [field_radius(layout, pose), 2.0, pose.level, pose.clock],
             },
             ears: [pose.done, pose.fail, 0.0, 0.0],
         }
