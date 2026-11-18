@@ -67,6 +67,7 @@ fn nav_row(
     press: impl Fn(&mut Ui, &mut Tx) + 'static,
 ) -> El {
     let c = &p.k.c;
+    let (on_fill, on_text, on_icon) = super::sidebar::nav_on(p);
     let press = std::rc::Rc::new(press);
     let in_slot = press.clone();
     let mut item = row()
@@ -85,21 +86,21 @@ fn nav_row(
         .child(
             rune::icon(icon, 16.0)
                 .key("icon")
-                .color(if on { c.icon_base } else { c.icon_muted })
+                .color(if on { on_icon } else { c.icon_muted })
                 .a11y_hidden(),
         )
         .child(
             text(label)
                 .key("label")
                 .font(p.k.ty.ui)
-                .color(if on { c.text_base } else { c.text_muted })
+                .color(if on { on_text } else { c.text_muted })
                 .a11y_hidden(),
         );
     if focusable {
         item = item.focusable(true);
     }
     if on {
-        item = item.fill(c.layer_02);
+        item = item.fill(on_fill);
     }
     row()
         .key(format!("{key}-slot"))

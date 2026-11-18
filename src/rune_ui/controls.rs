@@ -104,24 +104,26 @@ fn arcade_kit() -> &'static Kit {
 }
 
 /// custom (Hex 2.0): the "Comic" window theme, after the DSF Claude
-/// Organizer logo: sky-blue page, cream panels, yellow selection, red
-/// accents, and black outlines (drawn 2 px wide by `Paint::new`).
+/// Organizer logo: comic-yellow sidebar, cream panels, red selected tab
+/// and accents, and black outlines (drawn 2 px wide by `Paint::new`).
 fn comic_kit() -> &'static Kit {
     static KIT: std::sync::LazyLock<Kit> = std::sync::LazyLock::new(|| {
         let h = |s: &str| rune::color::hex(s).unwrap_or(rune::Color::WHITE);
         let mut k = rune_theme_opencode::kit(false).clone();
         let c = &mut k.c;
         let ink = h("#141414");
-        c.page = h("#29a9e9");
+        c.page = h("#ffe9a8");
         c.bg_base = h("#fffaf0");
-        c.bg_deep = h("#29a9e9");
+        c.bg_deep = h("#ffe9a8");
         c.layer_01 = h("#ffffff");
         c.layer_02 = h("#ffd21f");
         c.layer_03 = h("#ffe36b");
-        c.layer_04 = h("#ffec99");
+        // Switch "off" track: warm grey so the white knob reads on cream.
+        c.layer_04 = h("#8f8a80");
         c.surface_base = h("#ffffff");
         c.bg_accent = h("#e8202a");
-        c.knob_on = h("#e8202a");
+        c.knob = h("#ffffff");
+        c.knob_on = h("#ffffff");
         c.text_base = ink;
         c.text_strong = ink;
         c.text_muted = h("#262626");

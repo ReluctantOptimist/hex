@@ -522,8 +522,20 @@ fn select_on_down(ui: &mut Ui, d: &mut rune::Drag, tx: &mut Tx, pane: Pane) {
     }
 }
 
+/// custom (Hex 2.0): a selected sidebar row's fill, text and icon colours.
+/// The Comic theme marks it red with white; the others keep Hex's look.
+pub(super) fn nav_on(p: Paint) -> (rune::Color, rune::Color, rune::Color) {
+    let c = &p.k.c;
+    if crate::app_settings::APP_THEME.load(std::sync::atomic::Ordering::Relaxed) == 2 {
+        (c.bg_accent, c.white, c.white)
+    } else {
+        (c.layer_02, c.text_base, c.icon_base)
+    }
+}
+
 fn nav_item(p: Paint, pane: Pane, on: bool) -> El {
     let c = &p.k.c;
+    let (on_fill, on_text, on_icon) = nav_on(p);
     // A row of the navigation list, selected while its pane shows.
     let mut item = row()
         .key(pane.key())
@@ -551,19 +563,19 @@ fn nav_item(p: Paint, pane: Pane, on: bool) -> El {
         .child(
             icon(pane.icon(), 16.0)
                 .key("icon")
-                .color(if on { c.icon_base } else { c.icon_muted })
+                .color(if on { on_icon } else { c.icon_muted })
                 .a11y_hidden(),
         )
         .child(
             text(pane.title())
                 .key("label")
                 .font(p.k.ty.ui)
-                .color(if on { c.text_base } else { c.text_muted })
+                .color(if on { on_text } else { c.text_muted })
                 .truncate()
                 .a11y_hidden(),
         );
     if on {
-        item = item.fill(c.layer_02);
+        item = item.fill(on_fill);
     }
     lists::source_item(item, on)
 }
