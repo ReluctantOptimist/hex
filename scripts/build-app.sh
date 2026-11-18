@@ -19,7 +19,11 @@ if [ "${HEX_RELEASE_UNSIGNED:-}" = 1 ]; then
   bundle_id=anomaly.hex
 elif [ "${HEX_TEST_BUILD:-}" = 1 ]; then
   team_id=
-  identity=-
+  # custom: sign Hex 2.0 with Dalton's local certificate (when present) so
+  # macOS keeps its Microphone/Accessibility permissions across rebuilds.
+  identity=$(security find-identity -v -p codesigning | sed -n 's/.*) \([0-9A-F]\{40\}\) "Z Mouse Map Signing".*/\1/p' | head -1)
+  identity=${HEX2_CODESIGN_IDENTITY:-${identity:--}}
+  local_identity=1
   app_name="Hex 2.0" # custom: Dalton's personal build
   bundle_id=anomaly.hex.test
 else
@@ -45,6 +49,8 @@ executable="$bundle/Contents/MacOS/$executable_name"
 sign() {
   if [ "$identity" = - ]; then
     codesign --force --sign - "$@"
+  elif [ "${local_identity:-}" = 1 ]; then
+    codesign --force --options runtime --sign "$identity" "$@"
   else
     codesign --force --timestamp --options runtime --sign "$identity" "$@"
   fi
@@ -75,7 +81,7 @@ cp "$root/target/release/hex" "$executable"
 cp "$root/target/release/scrawl-helper" "$bundle/Contents/MacOS/scrawl-helper"
 cp "$root/app/Info.plist" "$bundle/Contents/Info.plist"
 cp "$root/LICENSE" "$root/THIRD_PARTY_NOTICES.md" "$bundle/Contents/Resources/"
-HEX_VERSION="$version" HEX_BUILD_NUMBER="$build_number" HEX_TEAM_ID="$team_id" HEX_CODESIGN_IDENTITY="${identity#-}" HEX_SKIP_INSTALL_SCRIPT=1 \
+HEX_VERSION="$version" HEX_BUILD_NUMBER="$build_number" HEX_TEAM_ID="$team_id" HEX_CODESIGN_IDENTITY="$([ "${local_identity:-}" = 1 ] || printf %s "${identity#-}")" HEX_SKIP_INSTALL_SCRIPT=1 \
   "$root/scripts/build-hex-microphone-driver.sh" "$bundle/Contents/Library" >&2
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" "$bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_number" "$bundle/Contents/Info.plist"
